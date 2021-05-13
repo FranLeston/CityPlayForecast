@@ -130,4 +130,7 @@ dmypy.json
 
 #sales data
 clean_sales.xlsx
-data/sales_clean.csv
+data/*.csv
+*.csv
+*.xlsx
+*.xls
