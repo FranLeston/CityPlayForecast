@@ -127,3 +127,7 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+#sales data
+clean_sales.xlsx
+data/sales_clean.csv
