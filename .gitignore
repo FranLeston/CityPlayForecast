@@ -135,4 +135,4 @@ data/*.csv
 *.xlsx
 *.xls
 
-/cityplay
+cityplay/
