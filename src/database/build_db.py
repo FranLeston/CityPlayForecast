@@ -67,24 +67,59 @@ def create_schemas(conn):
             '''
         )
         print("Finished creating sales table!")
-        is_db_empty(conn)
 
     except Exception as error:
         print("There was an error creating the Sales Table...exiting")
         print(error)
         sys.exit()
 
+    try:
+        print("Creating Holidays table...")
+
+        conn.execute(
+            '''
+            CREATE TABLE IF NOT EXISTS Holidays(
+            id int not null auto_increment primary key,
+            date DATE not null,
+            day_type varchar(15) not null,
+            holiday_type varchar(100),
+            holiday_name varchar(100))
+            ENGINE=INNODB;
+            '''
+        )
+        print("Finished creating Holidays table!")
+
+    except Exception as error:
+        print("There was an error creating the Holidays Table...exiting")
+        print(error)
+        sys.exit()
+
+    is_db_empty(conn)
+
 
 def is_db_empty(conn):
     try:
-        result = conn.execute(
+        sales_result = conn.execute(
             '''
             select count(*) from Sales;
             '''
         )
-        rows = result.fetchone()[0]
-        if rows == 0:
-            insert_data(conn)
+        sales_rows = sales_result.fetchone()[0]
+
+        if sales_rows == 0:
+            insert_sales_data(conn)
+        else:
+            return
+
+        holidays_result = conn.execute(
+            '''
+            select count(*) from Holidays;
+            '''
+        )
+
+        holiday_rows = holidays_result.fetchone()[0]
+        if holiday_rows == 0:
+            insert_holiday_data(conn)
         else:
             return
 
@@ -94,7 +129,7 @@ def is_db_empty(conn):
         sys.exit()
 
 
-def insert_data(conn):
+def insert_sales_data(conn):
     df_sales = pd.read_csv('./data/db_load_files/clean_data.csv')
     df_sales = df_sales.where(pd.notnull(df_sales), None)
     del df_sales['did_snow']
@@ -103,5 +138,23 @@ def insert_data(conn):
     # Insert DataFrame recrds one by one.
     for _i, row in df_sales.iterrows():
         sql = "INSERT INTO `Sales` (`" + cols + \
+            "`) VALUES (" + "%s,"*(len(row)-1) + "%s)"
+        conn.execute(sql, tuple(row))
+
+
+def insert_holiday_data(conn):
+    df_holidays = pd.read_excel('./data/db_load_files/calendario.xls')
+    df_holidays.rename(columns={'Dia': 'date', 'laborable / festivo / domingo festivo': 'day_type',
+                       'Festividad': 'holiday_name', 'Tipo de Festivo': 'holiday_type'}, inplace=True)
+
+    del df_holidays['Dia_semana']
+
+    df_holidays = df_holidays.where(pd.notnull(df_holidays), None)
+
+    cols = "`,`".join([str(i) for i in df_holidays.columns.tolist()])
+
+    # Insert DataFrame recrds one by one.
+    for _i, row in df_holidays.iterrows():
+        sql = "INSERT INTO `Holidays` (`" + cols + \
             "`) VALUES (" + "%s,"*(len(row)-1) + "%s)"
         conn.execute(sql, tuple(row))
