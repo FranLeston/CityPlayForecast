@@ -70,10 +70,11 @@ def prepare_data(df_weather, model):
 
     df_test = df_test.append(df_placeholder)
 
+    conditions = ["Rain", "Thunderstorm", "Drizzle", "Snow"]
     df_test['did_rain'] = df_test['type'].apply(
-        lambda x: 1 if x == 'Rain' else 0)
+        lambda x: 1 if x in conditions else 0)
     df_test['total_precip_mm'] = df_test['did_rain'].apply(
-        lambda x: 0.5 if x == 1 else 0)
+        lambda x: 0.7 if x == 1 else 0)
 
     date_min = df_test.date.min()
     date_max = df_test.date.max()
@@ -135,8 +136,23 @@ def predict_data(df_test, model):
         df_results['Sales Prediction'] = predicted_price_h2.predict
 
         return df_results
+    elif model == "stacked":
+        df_results = df_weather.copy()
+        h2o.init()
+        saved_model = h2o.load_model(
+            '/mnt/c/Users/lesto/Desktop/Ironhack/CityPlayForecast/models/autostacked/StackedEnsemble_AllModels_AutoML_20210517_174810')
+        stacked_test = df_test.copy()
+        # Conversion into a H20 frame to train
+        h2test = h2o.H2OFrame(stacked_test)
+        predicted_price_h2 = saved_model.predict(
+            h2test).as_data_frame()
+        print(predicted_price_h2)
+        df_results['Sales Prediction'] = predicted_price_h2.predict
+
+        return df_results
 
 
+h20_stacked_model = prepare_data(df_weather, "stacked")
 forest_weekly_outlook = prepare_data(df_weather, "forest")
 deep_learn_model = prepare_data(df_weather, "deep")
 
@@ -167,6 +183,8 @@ df = user_input_features()
 
 
 # main
+st.text('Weekly Outlook (H2O Stacked Model)')
+st.dataframe(h20_stacked_model)
 st.text('Weekly Outlook (Random Forest Model)')
 st.dataframe(forest_weekly_outlook)
 st.text('Weekly Outlook (Deep Learning Model)')
