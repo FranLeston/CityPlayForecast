@@ -23,7 +23,6 @@ import h2o
 rnd_forest_model = pickle.load(open("models/best_rf.pkl", 'rb'))
 
 st.set_option('deprecation.showPyplotGlobalUse', False)
-
 # My functions
 
 if __name__ == '__main__':
@@ -66,7 +65,6 @@ def prepare_data(df_weather, model):
 
     df_placeholder = df_sales.drop(columns=['total_sales'])
     df_placeholder['date'] = pd.to_datetime(df_placeholder['date'])
-    print(df_placeholder)
 
     df_test = df_test.append(df_placeholder)
 
@@ -74,7 +72,7 @@ def prepare_data(df_weather, model):
     df_test['did_rain'] = df_test['type'].apply(
         lambda x: 1 if x in conditions else 0)
     df_test['total_precip_mm'] = df_test['did_rain'].apply(
-        lambda x: 0.7 if x == 1 else 0)
+        lambda x: 8 if x == 1 else 0)
 
     date_min = df_test.date.min()
     date_max = df_test.date.max()
@@ -112,18 +110,19 @@ def prepare_data(df_weather, model):
 
 def predict_data(df_test, model):
     if model == 'forest':
-        df_results = df_weather.copy()
+        # df_results = df_weather.copy()
+        df_results = pd.DataFrame()
         predictions = rnd_forest_model.predict(df_test)
         round_predicts = [round(num, 2) for num in predictions]
 
-        print(round_predicts)
+        df_results = pd.DataFrame(round_predicts, columns=[
+                                  'predict'])
 
-        df_results['Sales Prediction'] = pd.Series(
-            round_predicts, index=df_results.index)
+        # df_results['Sales Prediction'] = pd.Series(round_predicts, index=df_results.index)
 
         return df_results
     elif model == "deep":
-        df_results = df_weather.copy()
+        # df_results = df_weather.copy()
         h2o.init()
         saved_model = h2o.load_model(
             '/mnt/c/Users/lesto/Desktop/Ironhack/CityPlayForecast/models/deeplearning/DeepLearning_grid__2_AutoML_20210515_173143_model_1')
@@ -132,12 +131,13 @@ def predict_data(df_test, model):
         h2test = h2o.H2OFrame(stacked_test)
         predicted_price_h2 = saved_model.predict(
             h2test).as_data_frame()
-        print(predicted_price_h2)
-        df_results['Sales Prediction'] = predicted_price_h2.predict
+
+        df_results = predicted_price_h2.copy()
+        # df_results['Sales Prediction'] = predicted_price_h2.predict
 
         return df_results
     elif model == "stacked":
-        df_results = df_weather.copy()
+        # df_results = df_weather.copy()
         h2o.init()
         saved_model = h2o.load_model(
             '/mnt/c/Users/lesto/Desktop/Ironhack/CityPlayForecast/models/autostacked/StackedEnsemble_AllModels_AutoML_20210517_174810')
@@ -146,8 +146,9 @@ def predict_data(df_test, model):
         h2test = h2o.H2OFrame(stacked_test)
         predicted_price_h2 = saved_model.predict(
             h2test).as_data_frame()
-        print(predicted_price_h2)
-        df_results['Sales Prediction'] = predicted_price_h2.predict
+
+        df_results = predicted_price_h2.copy()
+        # df_results['Sales Prediction'] = predicted_price_h2.predict
 
         return df_results
 
@@ -156,6 +157,15 @@ h20_stacked_model = prepare_data(df_weather, "stacked")
 forest_weekly_outlook = prepare_data(df_weather, "forest")
 deep_learn_model = prepare_data(df_weather, "deep")
 
+df_main = df_weather.copy()
+df_main.rename(columns={"type": "Weather",
+               "average_temp": "Temp"}, inplace=True)
+df_main['RndForest Sales'] = forest_weekly_outlook['predict']
+df_main['DeepLearn Sales'] = deep_learn_model['predict']
+df_main['h2O Sales'] = h20_stacked_model['predict']
+df_main['date'] = pd.to_datetime(df_main['date'])
+df_main['date'] = df_main['date'].dt.strftime('%d/%m/%Y')
+
 st.write("""
 # CityPlay Sales Prediction App
 This app predicts **sales for CityPlay, a bowling alley in Madrid**!
@@ -163,32 +173,119 @@ This app predicts **sales for CityPlay, a bowling alley in Madrid**!
 st.write('---')
 
 # sidebar
-st.sidebar.header('Input Parameters')
+st.sidebar.header('Choose Input Params')
 
 
 def user_input_features():
-    st.sidebar.date_input('Date input')
-    holidays = ["Holiday", "Holiday-eve", "post-Holiday", "Normal day"]
+    today = datetime.date.today()
+    week_from_now = today + datetime.timedelta(days=8)
 
-    st.sidebar.radio("What Type of day is it?", holidays)
-    st.sidebar.number_input('Do you happen to know the sales the day before? The default is the average.',
-                            min_value=0.00, max_value=20000.00, value=2455.00, step=20.00, format=None, key=None)
+    start_date = st.sidebar.date_input('Date input', week_from_now)
+    holidays = ["Normal day", "Holiday", "Holiday-eve", "post-Holiday"]
+    holiday_choice = st.sidebar.radio("What Type of day is it?", holidays)
+    prev_sales_value = st.sidebar.number_input('Do you happen to know the sales the day before? The default is the average.',
+                                               min_value=0.00, max_value=20000.00, value=2455.00, step=20.00, format=None, key=None)
 
-    data = {}
-    features = pd.DataFrame(data, index=[0])
-    return features
+    temp = st.sidebar.slider('Temperature', value=17,
+                             min_value=-15, max_value=48)
+    will_it_rain = [False, True]
+    did_rain_value = st.sidebar.radio(
+        "Predict Rain/Snow (People will stay home it rains a lot!)", will_it_rain)
+    if did_rain_value:
+        mm = st.sidebar.slider('RainFall in millimeters', value=8.5,
+                               min_value=0.5, max_value=29.5, step=0.5)
+    else:
+        mm = 0
+
+    data_list = [start_date]
+
+    df_test_day = pd.DataFrame([data_list])
+    df_test_day.columns = ['date']
+
+    df_test_day['date'] = pd.to_datetime(df_test_day['date'])
+    df_test_day2 = df_test_day.copy()
+
+    day_of_week = str(df_test_day.date.dt.day_name()).split()[1]
+    print("DAY:", day_of_week)
+    weekend = ["Saturday", "Sunday"]
+
+    df_test_day["day_of_week"] = df_test_day.date.dt.day_name()
+    df_test_day["month_name"] = df_test_day.date.dt.month_name()
+    df_test_day["day"] = df_test_day.date.dt.day
+    df_test_day["year"] = df_test_day.date.dt.year
+
+    df_placeholder2 = df_sales.drop(columns=['total_sales'])
+    df_placeholder2['date'] = pd.to_datetime(df_placeholder2['date'])
+
+    df_test_day = df_test_day.append(df_placeholder2)
+    df_test_day['did_rain'] = 1 if did_rain_value == True else 0
+    df_test_day['total_precip_mm'] = mm
+
+    df_test_day['day_type_domingo'] = df_test_day['day_of_week'].apply(
+        lambda x: 1 if x == "Sunday" else 0)
+    df_test_day['day_type_sábado'] = df_test_day['day_of_week'].apply(
+        lambda x: 1 if x == "Saturday" else 0)
+    df_test_day['day_type_festivo'] = 1 if holiday_choice == "Holiday" else 0
+
+    if holiday_choice == "Normal day":
+        if day_of_week not in weekend:
+            df_test_day['day_type_laborable'] = 1
+        else:
+            df_test_day['day_type_laborable'] = 0
+    elif holiday_choice == "Holiday":
+        if day_of_week in weekend:
+            df_test_day['day_type_sábado'] = 0
+            df_test_day['day_type_domingo'] = 0
+        else:
+            df_test_day['day_type_laborable'] = 0
+
+    df_test_day['is_post_holiday'] = 1 if holiday_choice == "post-Holiday" else 0
+    df_test_day['is_pre_holiday'] = 1 if holiday_choice == "Holiday-eve" else 0
+    df_test_day['average_temp'] = temp
+    df_test_day['is_closed'] = 0
+    df_test_day['is_lockdown'] = 0
+    df_test_day['is_curfew'] = 0
+    df_test_day['prev_sales'] = prev_sales_value
+
+    df_test_day = df_test_day.set_index('date')
+    df_test_day['year'] = df_test_day.year.astype('category')
+
+    del df_test_day['day']
+
+    df_test_day = pd.get_dummies(df_test_day, dummy_na=True)
+
+    df_test_day = df_test_day.iloc[0:1]
+    del df_test_day['month_name_nan']
+    del df_test_day['day_of_week_nan']
+    del df_test_day['year_nan']
+
+    df_test2 = df_test_day.copy()
+
+    df_test2.to_csv("sampletesting.csv", index=True)
+
+    res_stacked_df = predict_data(df_test2, "stacked")
+    res_deep_df = predict_data(df_test2, "deep")
+
+    df_test_day2['date'] = pd.to_datetime(df_test_day2['date'])
+    df_test_day2['date'] = df_test_day2['date'].dt.strftime('%d/%m/%Y')
+
+    df_test_day2['DeepLearn Sales'] = res_deep_df['predict']
+    df_test_day2['h2O Sales'] = res_stacked_df['predict']
+
+    return df_test_day2
 
 
-df = user_input_features()
-
+results_df = user_input_features()
 
 # main
-st.text('Weekly Outlook (H2O Stacked Model)')
-st.dataframe(h20_stacked_model)
-st.text('Weekly Outlook (Random Forest Model)')
-st.dataframe(forest_weekly_outlook)
-st.text('Weekly Outlook (Deep Learning Model)')
-st.dataframe(deep_learn_model)
+
+st.text('Your Query:')
+st.dataframe(results_df.style.format(
+    {'h2O Sales': '{:.2f}', 'DeepLearn Sales': '{:.2f}'}))
+
+st.text('Weekly Outlook')
+st.dataframe(df_main.style.format(
+    {'Temp': '{:.1f}', 'RndForest Sales': '{:.2f}', 'h2O Sales': '{:.2f}', 'DeepLearn Sales': '{:.2f}'}))
 
 
 df_sales.plot(x='date', y='total_sales', figsize=(20, 6))
