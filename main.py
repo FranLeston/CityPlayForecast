@@ -10,19 +10,21 @@ import pymysql
 import sys
 import json
 import streamlit as st
-import matplotlib as mpl
 import matplotlib.pyplot as plt
 from sklearn import datasets
 import seaborn as sns
 import datetime
 import numpy as np
 import pickle
+import plotly.express as px
 import h2o
 
 
 rnd_forest_model = pickle.load(open("models/best_rf.pkl", 'rb'))
-
+st.set_page_config(layout="wide")
 st.set_option('deprecation.showPyplotGlobalUse', False)
+
+
 # My functions
 
 if __name__ == '__main__':
@@ -166,6 +168,8 @@ df_main['h2O Sales'] = h20_stacked_model['predict']
 df_main['date'] = pd.to_datetime(df_main['date'])
 df_main['date'] = df_main['date'].dt.strftime('%d/%m/%Y')
 
+
+st.image('images/logo_large.png', width=300)
 st.write("""
 # CityPlay Sales Prediction App
 This app predicts **sales for CityPlay, a bowling alley in Madrid**!
@@ -288,6 +292,8 @@ st.dataframe(df_main.style.format(
     {'Temp': '{:.1f}', 'RndForest Sales': '{:.2f}', 'h2O Sales': '{:.2f}', 'DeepLearn Sales': '{:.2f}'}))
 
 
-df_sales.plot(x='date', y='total_sales', figsize=(20, 6))
-plt.legend()
-st.pyplot()
+# VISUALS
+df_graphics = pd.read_csv('data/db_load_files/clean_data.csv')
+
+fig = px.line(df_graphics, x="date", y="total_sales")
+st.plotly_chart(fig)

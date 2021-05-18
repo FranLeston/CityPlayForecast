@@ -9,6 +9,7 @@ import sys
 import json
 
 
+
 load_dotenv()
 
 db_user = os.getenv("DB_USER")
