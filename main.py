@@ -17,6 +17,7 @@ import datetime
 import numpy as np
 import pickle
 import plotly.express as px
+import plotly.graph_objects as go
 import h2o
 
 
@@ -168,6 +169,30 @@ df_main['h2O Sales'] = h20_stacked_model['predict']
 df_main['date'] = pd.to_datetime(df_main['date'])
 df_main['date'] = df_main['date'].dt.strftime('%d/%m/%Y')
 
+df_main['AVG Prediction'] = df_main[[
+    'DeepLearn Sales', 'h2O Sales', 'RndForest Sales']].mean(axis=1)
+
+
+def get_employees(x):
+    if x < 1000:
+        return 3
+    elif x >= 1000 and x < 2000:
+        return 4
+    elif x >= 2000 and x < 4000:
+        return 5
+    elif x >= 4000 and x < 6000:
+        return 6
+    elif x >= 6000 and x < 8000:
+        return 7
+    elif x >= 8000 and x < 10000:
+        return 8
+    elif x >= 10000:
+        return 10
+
+
+df_main['Employees Needed'] = df_main['AVG Prediction'].apply(
+    lambda x: get_employees(x))
+
 
 st.image('images/logo_large.png', width=300)
 st.write("""
@@ -276,6 +301,27 @@ def user_input_features():
     df_test_day2['DeepLearn Sales'] = res_deep_df['predict']
     df_test_day2['h2O Sales'] = res_stacked_df['predict']
 
+    df_test_day2['AVG Prediction'] = df_test_day2[[
+        'DeepLearn Sales', 'h2O Sales']].mean(axis=1)
+
+    def get_employees(x):
+        if x < 1000:
+            return 3
+        elif x >= 1000 and x < 2000:
+            return 4
+        elif x >= 2000 and x < 4000:
+            return 5
+        elif x >= 4000 and x < 6000:
+            return 6
+        elif x >= 6000 and x < 8000:
+            return 7
+        elif x >= 8000 and x < 10000:
+            return 8
+        elif x >= 10000:
+            return 10
+
+    df_test_day2['Employees Needed'] = df_test_day2['AVG Prediction'].apply(
+        lambda x: get_employees(x))
     return df_test_day2
 
 
@@ -295,5 +341,33 @@ st.dataframe(df_main.style.format(
 # VISUALS
 df_graphics = pd.read_csv('data/db_load_files/clean_data.csv')
 
-fig = px.line(df_graphics, x="date", y="total_sales")
-st.plotly_chart(fig)
+fig = px.line(df_graphics, x="date", y="total_sales",
+              title='Daily Sales 21/09/2021 - 11/05/2021')
+fig.data[0].line.color = 'rgb(204, 20, 204)'
+st.plotly_chart(fig, use_container_width=True)
+
+# 2
+fig2 = px.bar(df_graphics, x="year", color="day_of_week",
+              y='total_sales',
+              title="Sales / Day of the week",
+              barmode='group',
+              )
+st.plotly_chart(fig2, use_container_width=True)
+# 3
+fig3 = px.bar(df_graphics, x="year", color="month_name",
+              y='total_sales',
+              title="Sales / Month",
+              barmode='group',
+              )
+st.plotly_chart(fig3, use_container_width=True)
+
+list_holidays = df_graphics.groupby('holiday_name').mean().sort_values(
+    by=['total_sales'], ascending=False)
+
+list_holidays = list_holidays[[
+    'total_sales', 'average_temp', 'total_precip_mm']]
+list_holidays.rename(columns={'total_sales': 'AVG Sales',
+                     'average_temp': 'AVG Temperature', 'total_precip_mm': "AVG Rainfall mm"}, inplace=True)
+
+st.text('Busiest Holidays')
+st.dataframe(list_holidays)
