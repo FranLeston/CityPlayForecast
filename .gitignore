@@ -128,11 +128,6 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
-#sales data
-clean_sales.xlsx
-data/*.csv
-*.csv
-*.xlsx
-*.xls
+
 
 cityplay/

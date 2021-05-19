@@ -20,6 +20,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 import h2o
 
+h2o.init()
 
 rnd_forest_model = pickle.load(open("models/best_rf.pkl", 'rb'))
 st.set_page_config(layout="wide")
@@ -126,7 +127,7 @@ def predict_data(df_test, model):
         return df_results
     elif model == "deep":
         # df_results = df_weather.copy()
-        h2o.init()
+        # h2o.init()
         saved_model = h2o.load_model(
             '/mnt/c/Users/lesto/Desktop/Ironhack/CityPlayForecast/models/deeplearning/DeepLearning_grid__2_AutoML_20210515_173143_model_1')
         stacked_test = df_test.copy()
@@ -141,7 +142,7 @@ def predict_data(df_test, model):
         return df_results
     elif model == "stacked":
         # df_results = df_weather.copy()
-        h2o.init()
+        # h2o.init()
         saved_model = h2o.load_model(
             '/mnt/c/Users/lesto/Desktop/Ironhack/CityPlayForecast/models/autostacked/StackedEnsemble_AllModels_AutoML_20210517_174810')
         stacked_test = df_test.copy()
@@ -331,43 +332,65 @@ results_df = user_input_features()
 
 st.text('Your Query:')
 st.dataframe(results_df.style.format(
-    {'h2O Sales': '{:.2f}', 'DeepLearn Sales': '{:.2f}'}))
+    {'h2O Sales': '{:.2f}', 'DeepLearn Sales': '{:.2f}', 'AVG Prediction': '{:.2f}'}))
 
 st.text('Weekly Outlook')
 st.dataframe(df_main.style.format(
-    {'Temp': '{:.1f}', 'RndForest Sales': '{:.2f}', 'h2O Sales': '{:.2f}', 'DeepLearn Sales': '{:.2f}'}))
+    {'Temp': '{:.1f}', 'RndForest Sales': '{:.2f}', 'h2O Sales': '{:.2f}', 'DeepLearn Sales': '{:.2f}', 'AVG Prediction': '{:.2f}'}))
 
 
 # VISUALS
 df_graphics = pd.read_csv('data/db_load_files/clean_data.csv')
 
-fig = px.line(df_graphics, x="date", y="total_sales",
-              title='Daily Sales 21/09/2021 - 11/05/2021')
-fig.data[0].line.color = 'rgb(204, 20, 204)'
-st.plotly_chart(fig, use_container_width=True)
+chart_list = ["Time Series of Sales", "Sales per Day of the week",
+              "Sales per Month", "Top Holidays", "Top Days"]
+selection = st.selectbox('Charts / Information', chart_list)
 
-# 2
-fig2 = px.bar(df_graphics, x="year", color="day_of_week",
-              y='total_sales',
-              title="Sales / Day of the week",
-              barmode='group',
-              )
-st.plotly_chart(fig2, use_container_width=True)
-# 3
-fig3 = px.bar(df_graphics, x="year", color="month_name",
-              y='total_sales',
-              title="Sales / Month",
-              barmode='group',
-              )
-st.plotly_chart(fig3, use_container_width=True)
+# 1
+if selection == "Time Series of Sales":
+    fig = px.line(df_graphics, x="date", y="total_sales",
+                  title='Daily Sales 21/09/2021 - 11/05/2021')
+    fig.data[0].line.color = '#00cb56'
+    st.plotly_chart(fig, use_container_width=True)
+elif selection == "Sales per Day of the week":
+    # 2
+    fig2 = px.bar(df_graphics, x="year", color="day_of_week",
+                  y='total_sales',
+                  title="Sales / Day of the week",
+                  barmode='group',
+                  )
+    st.plotly_chart(fig2, use_container_width=True)
+elif selection == "Sales per Month":
+    # 3
+    fig3 = px.bar(df_graphics, x="year", color="month_name",
+                  y='total_sales',
+                  title="Sales / Month",
+                  barmode='group',
+                  )
+    st.plotly_chart(fig3, use_container_width=True)
+elif selection == "Top Holidays":
+    # 4
+    list_holidays = df_graphics.groupby('holiday_name').mean().sort_values(
+        by=['total_sales'], ascending=False)
 
-list_holidays = df_graphics.groupby('holiday_name').mean().sort_values(
-    by=['total_sales'], ascending=False)
+    list_holidays = list_holidays[[
+        'total_sales', 'average_temp', 'total_precip_mm']]
+    list_holidays.rename(columns={'total_sales': 'AVG Sales',
+                                  'average_temp': 'AVG Temperature', 'total_precip_mm': "AVG Rainfall mm"}, inplace=True)
 
-list_holidays = list_holidays[[
-    'total_sales', 'average_temp', 'total_precip_mm']]
-list_holidays.rename(columns={'total_sales': 'AVG Sales',
-                     'average_temp': 'AVG Temperature', 'total_precip_mm': "AVG Rainfall mm"}, inplace=True)
+    st.text('Busiest Holidays')
+    st.dataframe(list_holidays.style.format(
+        {'AVG Sales': '{:.2f}', 'AVG Temperature': '{:.1f}', 'AVG Rainfall mm': '{:.1f}'}))
+elif selection == "Top Days":
+    # 5
+    list_ranking = df_graphics.sort_values(
+        by=['total_sales'], ascending=False)
 
-st.text('Busiest Holidays')
-st.dataframe(list_holidays)
+    list_ranking = list_ranking[[
+        'date', 'total_sales', 'average_temp', 'total_precip_mm']]
+    list_ranking.rename(columns={'total_sales': 'Sales',
+                                 'average_temp': 'Temperature', 'total_precip_mm': "Rainfall mm"}, inplace=True)
+
+    st.text('Top Sales in on day')
+    st.dataframe(list_ranking.style.format(
+        {'Sales': '{:.2f}', 'Temperature': '{:.1f}', 'Rainfall mm': '{:.1f}'}))
