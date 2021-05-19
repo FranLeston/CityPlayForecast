@@ -9,15 +9,15 @@ import sys
 import json
 
 
-
 load_dotenv()
 
 db_user = os.getenv("DB_USER")
 db_password = os.getenv("DB_PASSWORD")
+db_url = os.getenv("DB_URL")
 
 
 def connect_to_mysql():
-    connectionData = f"mysql+pymysql://{db_user}:{db_password}@localhost/cityplay"
+    connectionData = db_url
     try:
 
         engine = create_engine(connectionData, echo=False)

@@ -10,9 +10,6 @@ import pymysql
 import sys
 import json
 import streamlit as st
-import matplotlib.pyplot as plt
-from sklearn import datasets
-import seaborn as sns
 import datetime
 import numpy as np
 import pickle
