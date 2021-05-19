@@ -129,7 +129,7 @@ def predict_data(df_test, model):
         # df_results = df_weather.copy()
         # h2o.init()
         saved_model = h2o.load_model(
-            '/mnt/c/Users/lesto/Desktop/Ironhack/CityPlayForecast/models/deeplearning/DeepLearning_grid__2_AutoML_20210515_173143_model_1')
+            'models/deeplearning/DeepLearning_grid__2_AutoML_20210515_173143_model_1')
         stacked_test = df_test.copy()
         # Conversion into a H20 frame to train
         h2test = h2o.H2OFrame(stacked_test)
@@ -144,7 +144,7 @@ def predict_data(df_test, model):
         # df_results = df_weather.copy()
         # h2o.init()
         saved_model = h2o.load_model(
-            '/mnt/c/Users/lesto/Desktop/Ironhack/CityPlayForecast/models/autostacked/StackedEnsemble_AllModels_AutoML_20210517_174810')
+            'models/autostacked/StackedEnsemble_AllModels_AutoML_20210517_174810')
         stacked_test = df_test.copy()
         # Conversion into a H20 frame to train
         h2test = h2o.H2OFrame(stacked_test)
