@@ -29,6 +29,7 @@ def get_next_seven_days(next_seven_url):
 
     df_weather = pd.DataFrame(weather_list, columns=[
                               'date', 'average_temp', 'type'])
+    print(df_weather)
     return df_weather
 
 

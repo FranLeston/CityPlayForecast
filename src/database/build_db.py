@@ -46,7 +46,7 @@ def create_schemas(conn):
 
         conn.execute(
             '''
-            CREATE TABLE IF NOT EXISTS Sales(
+            CREATE TABLE IF NOT EXISTS sales(
             id int not null auto_increment primary key,
             date DATE not null,
             total_sales float not null,
@@ -79,7 +79,7 @@ def create_schemas(conn):
 
         conn.execute(
             '''
-            CREATE TABLE IF NOT EXISTS Holidays(
+            CREATE TABLE IF NOT EXISTS holidays(
             id int not null auto_increment primary key,
             date DATE not null,
             day_type varchar(15) not null,
@@ -102,7 +102,7 @@ def is_db_empty(conn):
     try:
         sales_result = conn.execute(
             '''
-            select count(*) from Sales;
+            select count(*) from sales;
             '''
         )
         sales_rows = sales_result.fetchone()[0]
@@ -114,7 +114,7 @@ def is_db_empty(conn):
 
         holidays_result = conn.execute(
             '''
-            select count(*) from Holidays;
+            select count(*) from holidays;
             '''
         )
 
@@ -138,7 +138,7 @@ def insert_sales_data(conn):
 
     # Insert DataFrame recrds one by one.
     for _i, row in df_sales.iterrows():
-        sql = "INSERT INTO `Sales` (`" + cols + \
+        sql = "INSERT INTO `sales` (`" + cols + \
             "`) VALUES (" + "%s,"*(len(row)-1) + "%s)"
         conn.execute(sql, tuple(row))
 
@@ -156,6 +156,6 @@ def insert_holiday_data(conn):
 
     # Insert DataFrame recrds one by one.
     for _i, row in df_holidays.iterrows():
-        sql = "INSERT INTO `Holidays` (`" + cols + \
+        sql = "INSERT INTO `holidays` (`" + cols + \
             "`) VALUES (" + "%s,"*(len(row)-1) + "%s)"
         conn.execute(sql, tuple(row))
