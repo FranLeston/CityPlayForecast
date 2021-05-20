@@ -1,5 +1,6 @@
 import src.database.build_db as db
 import src.weather as weather
+import src.send_email as email
 import pandas as pd
 from sqlalchemy import create_engine
 from sqlalchemy_utils import database_exists, create_database
@@ -165,7 +166,7 @@ deep_learn_model = prepare_data(df_weather, "deep")
 
 df_main = df_weather.copy()
 df_main.rename(columns={"type": "Weather",
-               "average_temp": "average_temp"}, inplace=True)
+               "average_temp": "Temperature"}, inplace=True)
 df_main['RndForest Sales'] = forest_weekly_outlook['predict']
 df_main['DeepLearn Sales'] = deep_learn_model['predict']
 df_main['h2O Sales'] = h20_stacked_model['predict']
@@ -213,7 +214,7 @@ def user_input_features():
     week_from_now = today + datetime.timedelta(days=8)
 
     start_date = st.sidebar.date_input('Date input', week_from_now)
-    holidays = ["Normal day", "Holiday", "Holiday-eve", "post-Holiday"]
+    holidays = ["Normal day", "Holiday", "Holiday-eve", "Post-Holiday"]
     holiday_choice = st.sidebar.radio("What Type of day is it?", holidays)
     prev_sales_value = st.sidebar.number_input('Do you happen to know the sales the day before? The default is the average.',
                                                min_value=0.00, max_value=20000.00, value=2455.00, step=20.00, format=None, key=None)
@@ -226,7 +227,7 @@ def user_input_features():
 
     will_it_rain = [False, True]
     did_rain_value = st.sidebar.radio(
-        "Predict Rain/Snow (People will stay home it rains a lot!)", will_it_rain)
+        "Predict Rain/Snow (People will stay home if it rains a lot!)", will_it_rain)
     if did_rain_value:
         mm = st.sidebar.slider('RainFall in millimeters', value=8.5,
                                min_value=0.5, max_value=29.5, step=0.5)
@@ -274,7 +275,7 @@ def user_input_features():
         else:
             df_test_day['day_type_laborable'] = 0
 
-    df_test_day['is_post_holiday'] = 1 if holiday_choice == "post-Holiday" else 0
+    df_test_day['is_post_holiday'] = 1 if holiday_choice == "Post-Holiday" else 0
     df_test_day['is_pre_holiday'] = 1 if holiday_choice == "Holiday-eve" else 0
     df_test_day['average_temp'] = temp
     df_test_day['is_closed'] = 0
@@ -341,8 +342,12 @@ st.dataframe(results_df.style.format(
 
 st.text('Weekly Outlook')
 st.dataframe(df_main.style.format(
-    {'Temp': '{:.1f}', 'RndForest Sales': '{:.2f}', 'h2O Sales': '{:.2f}', 'DeepLearn Sales': '{:.2f}', 'AVG Prediction': '{:.2f}'}))
+    {'Temperature': '{:.1f}', 'RndForest Sales': '{:.2f}', 'h2O Sales': '{:.2f}', 'DeepLearn Sales': '{:.2f}', 'AVG Prediction': '{:.2f}'}))
 
+st.text('Send Report Email:')
+if st.button('SEND'):
+    email.send_email(df_main)
+    st.write('Email sent succesfully!')
 
 # VISUALS
 df_graphics = pd.read_csv('data/db_load_files/clean_data.csv')
